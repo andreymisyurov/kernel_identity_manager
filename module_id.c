@@ -17,7 +17,8 @@ struct identity {
 
 static LIST_HEAD(data_base);
 
-int identity_create(char *name, int id) {
+int identity_create(char *name, int id)
+{
     struct identity *node = kmalloc(sizeof(*node), GFP_KERNEL);
     if (!node)
         return -ENOMEM;
@@ -35,12 +36,65 @@ int identity_create(char *name, int id) {
     return 0;
 }
 
+struct identity *identity_find(int id)
+{
+    struct identity *identity;
+
+    list_for_each_entry(identity, &data_base, list)
+    {
+        if (identity->id == id)
+        {
+            return identity;
+        }
+    }
+    return NULL;
+}
+
+void identity_destroy(int id)
+{
+    struct identity *identity;
+
+    list_for_each_entry(identity, &data_base, list)
+    {
+        if (identity->id == id)
+        {
+            list_del(&identity->list);
+            kfree(identity);
+            break;
+        }
+    }
+}
+
+int identity_hire(int id)
+{
+    struct identity *identity;
+
+    list_for_each_entry(identity, &data_base, list)
+    {
+        if (identity->id == id)
+        {
+            identity->hired = true;
+            return 0;
+        }
+    }
+    return -1;
+}
+
 static int __init hello_init(void)
 {
     pr_info("Hello, KernelCare!\n");
+    struct identity * temp;
     identity_create("Andrey", 1);
     identity_create("Ivan", 2);
     identity_create("Aleksey", 3);
+    temp = identity_find(1);
+    pr_info("id 1 = %s\n", temp->name);
+    identity_hire(1);
+    temp = identity_find(10);
+    if (temp == NULL)
+        pr_info("id 10 not found\n");
+    identity_destroy(2);
+    identity_destroy(1);
     return 0;
 }
 
