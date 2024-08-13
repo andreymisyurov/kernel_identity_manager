@@ -74,9 +74,11 @@ void identity_destroy(int id)
             list_del(&identity->list);
             kfree(identity);
             pr_info("Id:%d was deleted successfully!\n", id);
-            break;
+            return;
         }
     }
+    pr_info("Id:%d was NOT founded!\n", id);
+
 }
 
 int identity_hire(int id)
