@@ -19,9 +19,22 @@ static LIST_HEAD(data_base);
 
 int identity_create(char *name, int id)
 {
-    struct identity *node = kmalloc(sizeof(*node), GFP_KERNEL);
-    if (!node)
+    struct identity *node = NULL;
+
+    list_for_each_entry(node, &data_base, list)
+    {
+        if (node->id == id)
+        {
+            pr_info("Identify with id:%d already exist\n", id);
+            return -EEXIST;
+        }
+    }
+
+    node = kmalloc(sizeof(*node), GFP_KERNEL);
+    if (!node) {
+        pr_info("Cannot create identify: %s with id %d. Memory error\n", name, id);
         return -ENOMEM;
+    }
 
     strncpy(node->name, name, sizeof(node->name) - 1);
     node->name[sizeof(node->name) - 1] = '\0';
@@ -38,7 +51,7 @@ int identity_create(char *name, int id)
 
 struct identity *identity_find(int id)
 {
-    struct identity *identity;
+    struct identity *identity = NULL;
 
     list_for_each_entry(identity, &data_base, list)
     {
@@ -52,7 +65,7 @@ struct identity *identity_find(int id)
 
 void identity_destroy(int id)
 {
-    struct identity *identity;
+    struct identity *identity = NULL;
 
     list_for_each_entry(identity, &data_base, list)
     {
@@ -60,6 +73,7 @@ void identity_destroy(int id)
         {
             list_del(&identity->list);
             kfree(identity);
+            pr_info("Id:%d was deleted successfully!\n", id);
             break;
         }
     }
@@ -67,38 +81,46 @@ void identity_destroy(int id)
 
 int identity_hire(int id)
 {
-    struct identity *identity;
-
+    struct identity *identity = NULL;
     list_for_each_entry(identity, &data_base, list)
     {
         if (identity->id == id)
         {
             identity->hired = true;
+            pr_info("Id:%d was hired successfully!\n", id);
             return 0;
         }
     }
     return -1;
 }
 
-static int __init hello_init(void)
+static int __init identity_manager_init(void)
 {
     pr_info("Hello, KernelCare!\n");
-    struct identity * temp;
-    identity_create("Andrey", 1);
-    identity_create("Ivan", 2);
-    identity_create("Aleksey", 3);
-    temp = identity_find(1);
-    pr_info("id 1 = %s\n", temp->name);
-    identity_hire(1);
+
+    if(identity_create("Andrey", 1))
+        pr_info("Module couldn't create identity\n");
+    if(identity_create("Ivan", 2))
+        pr_info("Module couldn't create identity\n");
+    if(identity_create("Aleksey", 3))
+        pr_info("Module couldn't create identity\n");
+    if(identity_create("Boris", 3))
+        pr_info("Module couldn't create identity\n");
+
+    struct identity * temp = identity_find(1);
+    if(temp)
+        pr_info("id 1 = %s\n", temp->name);
+    if(identity_hire(1))
+        pr_info("Module cannot hire identity\n");
     temp = identity_find(10);
-    if (temp == NULL)
+    if (!temp)
         pr_info("id 10 not found\n");
     identity_destroy(2);
     identity_destroy(1);
     return 0;
 }
 
-static void __exit hello_exit(void)
+static void __exit identity_manager_exit(void)
 {
     struct identity *identity, *tmp;
     list_for_each_entry_safe(identity, tmp, &data_base, list) {
@@ -106,8 +128,8 @@ static void __exit hello_exit(void)
         list_del(&identity->list);
         kfree(identity);
     }
-    pr_info("Goodbye, KernelCare!\n");
+    pr_info("We have deleted all of garbage. Goodbye, KernelCare!\n");
 }
 
-module_init(hello_init);
-module_exit(hello_exit);
+module_init(identity_manager_init);
+module_exit(identity_manager_exit);
